@@ -1,0 +1,38 @@
+name: note_me
+description: "Mindbook Pro clone — Fast, clean, offline-first markdown notebook for Android."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Storage — pinned like the reference repo to avoid the shared_preferences_android drift bug
+  shared_preferences: ^2.3.2
+  # Markdown parsing for notes
+  markdown: ^7.2.1
+  # HTML sanitizer for safe markdown rendering
+  html: ^0.15.4
+  # UUID for note ids
+  uuid: ^4.4.0
+  # Backup/export (file picking + saving)
+  path_provider: ^2.1.4
+  # Encryption for vault notes
+  encrypt: ^5.0.1
+
+dependency_overrides:
+  # Pinned on purpose (mirrors reference-repo Session-4 rule): shared_preferences_android
+  # 2.5.0+ introduced Pigeon JNI that caused silent black-screen builds. Keep 2.4.28.
+  shared_preferences_android: 2.4.28
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
