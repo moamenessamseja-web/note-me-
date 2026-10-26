@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Application-wide reactive state.
 ///
 /// Uses a [ValueNotifier] so any screen can call [notify] and all

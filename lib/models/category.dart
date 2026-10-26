@@ -1,5 +1,3 @@
-import 'note.dart';
-
 /// A note category (Work / Ideas / Personal / Learning ...).
 class Category {
   final String id;

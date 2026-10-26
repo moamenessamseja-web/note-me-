@@ -19,7 +19,9 @@ dependencies:
   uuid: ^4.4.0
   # Backup/export (file picking + saving)
   path_provider: ^2.1.4
-  # Encryption for vault notes
+  # Encryption for vault notes (AES/CBC via pure Dart)
+  pointycastle: ^3.9.1
+  # Encryption (kept for compatibility)
   encrypt: ^5.0.1
   # Arabic font (Cairo from Google Fonts — no local .ttf needed)
   google_fonts: ^6.1.0

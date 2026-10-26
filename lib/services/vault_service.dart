@@ -122,13 +122,8 @@ class VaultService {
 
   static Uint8List _deriveKey(String password) {
     const salt = 'note-me-vault-salt-v1';
-    final params = pc.PBKDF2Parameters(
-      utf8.encode(salt) as Uint8List,
-      100000,
-      32,
-    );
-    final derivator = pc.KeyDerivator('SHA-256/HMAC/PBKDF2') as pc.PBKDF2KeyDerivator;
-    derivator.init(params);
+    final derivator = pc.PBKDF2KeyDerivator(pc.HMac(pc.SHA256Digest(), 64));
+    derivator.init(pc.Pbkdf2Parameters(utf8.encode(salt) as Uint8List, 100000, 32));
     return derivator.process(utf8.encode(password) as Uint8List);
   }
 
@@ -140,11 +135,8 @@ class VaultService {
     );
 
     // AES/CBC encryption
-    final cipher = pc.PaddedBlockCipher('AES/CBC/PKCS7') as pc.PaddedBlockCipher;
-    cipher.init(
-      true,
-      pc.ParamsWithIV(pc.KeyParameter(key), iv) as pc.CipherParameters,
-    );
+    final cipher = pc.PaddedBlockCipher('AES/CBC/PKCS7');
+    cipher.init(true, pc.ParametersWithIV(pc.KeyParameter(key), iv));
     final plainBytes = utf8.encode(plain) as Uint8List;
     final encrypted = cipher.process(plainBytes);
 
@@ -161,24 +153,16 @@ class VaultService {
     final ciphertext = Uint8List.fromList(combined.sublist(16));
 
     final key = _deriveKey(password);
-    final cipher = pc.PaddedBlockCipher('AES/CBC/PKCS7') as pc.PaddedBlockCipher;
-    cipher.init(
-      false,
-      pc.ParamsWithIV(pc.KeyParameter(key), iv) as pc.CipherParameters,
-    );
+    final cipher = pc.PaddedBlockCipher('AES/CBC/PKCS7');
+    cipher.init(false, pc.ParametersWithIV(pc.KeyParameter(key), iv));
     final decrypted = cipher.process(ciphertext);
     return utf8.decode(decrypted);
   }
 
   static String _hash(String password) {
-    final derivator = pc.KeyDerivator('SHA-256/HMAC/PBKDF2') as pc.PBKDF2KeyDerivator;
+    final derivator = pc.PBKDF2KeyDerivator(pc.HMac(pc.SHA256Digest(), 64));
     const salt = 'note-me-vault-salt-v1';
-    final params = pc.PBKDF2Parameters(
-      utf8.encode(salt) as Uint8List,
-      100000,
-      32,
-    );
-    derivator.init(params);
+    derivator.init(pc.Pbkdf2Parameters(utf8.encode(salt) as Uint8List, 100000, 32));
     final out = derivator.process(utf8.encode(password) as Uint8List);
     return base64.encode(out);
   }

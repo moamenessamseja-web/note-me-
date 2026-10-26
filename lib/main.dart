@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:note_me/design/tokens.dart';
 import 'package:note_me/design/app_theme.dart';
 import 'package:note_me/design/strings.dart';
 import 'services/app_error_service.dart';

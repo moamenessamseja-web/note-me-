@@ -4,9 +4,7 @@ import 'package:note_me/design/tokens.dart';
 import 'package:note_me/design/app_theme.dart';
 import 'package:note_me/design/strings.dart';
 import '../services/storage_service.dart';
-import '../services/settings_service.dart';
 import '../models/note.dart';
-import '../models/category.dart';
 import '../widgets/note_card.dart';
 
 class NotesScreen extends StatefulWidget {
