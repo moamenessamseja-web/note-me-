@@ -26,7 +26,7 @@ class _VaultScreenState extends State<VaultScreen> {
   Future<void> _loadNotes() async {
     setState(() => _isLoading = true);
     await VaultService.init();
-    if (VaultService.hasPassword()) {
+    if (VaultService.instance.hasPassword()) {
       // If vault is locked, show prompt for password
       setState(() => _notes = []);
     } else {
@@ -98,10 +98,9 @@ class _VaultScreenState extends State<VaultScreen> {
             title: Text(note.title, style: AppText.body),
             subtitle: Text(note.preview, style: AppText.bodySm),
             leading: Icon(Icons.lock, color: AppColors.accent),
-            onTap: () async {
-              final decrypted = await VaultService.decryptNote(note);
+            onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(decrypted.title)),
+                SnackBar(content: Text(note.title)),
               );
             },
             trailing: IconButton(

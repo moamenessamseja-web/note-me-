@@ -77,7 +77,7 @@ class _SearchScreenState extends State<SearchScreen> {
               selected: _selectedCategory == null,
               onSelected: (v) => setState(() => _selectedCategory = v ? null : null),
               selectedColor: AppColors.primaryTint,
-              fillColor: AppColors.surface,
+                backgroundColor: AppColors.surface,
             ),
           ),
           for (var c in cats)
@@ -88,7 +88,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 selected: _selectedCategory == c.id,
                 onSelected: (v) => setState(() => _selectedCategory = v ? c.id : null),
                 selectedColor: AppColors.primaryTint,
-                fillColor: AppColors.surface,
+                backgroundColor: AppColors.surface,
                 labelPadding: EdgeInsets.symmetric(horizontal: AppSpace.x3),
               ),
             ),

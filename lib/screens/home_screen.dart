@@ -82,8 +82,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategoryChips() {
-    final all = [{'id': 'all', 'name': L.filter_all, 'color': AppColors.primary}],
-        StorageService.categories();
+    final all = [
+      {'id': 'all', 'name': L.filter_all, 'color': AppColors.primary},
+      ...StorageService.categories().map((c) => {'id': c.id, 'name': c.name, 'color': AppColors.primary}),
+    ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: EdgeInsets.symmetric(horizontal: AppSpace.x4),
@@ -97,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 selected: _selectedCategory == all[i]['id'],
                 onSelected: (v) => setState(() => _selectedCategory = v ? all[i]['id'] as String : null),
                 selectedColor: AppColors.primaryTint,
-                fillColor: AppColors.surface,
+                backgroundColor: AppColors.surface,
                 labelPadding: EdgeInsets.symmetric(horizontal: AppSpace.x3),
               ),
             ),

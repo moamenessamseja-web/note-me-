@@ -111,7 +111,7 @@ class _NotesScreenState extends State<NotesScreen> {
               selected: _selectedCategory == null,
               onSelected: (v) => setState(() => _selectedCategory = v ? null : null),
               selectedColor: AppColors.primaryTint,
-              fillColor: AppColors.surface,
+              backgroundColor: AppColors.surface,
             ),
           ),
           for (var i = 0; i < cats.length; i++)
@@ -122,7 +122,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 selected: _selectedCategory == cats[i].id,
                 onSelected: (v) => setState(() => _selectedCategory = v ? cats[i].id : null),
                 selectedColor: AppColors.primaryTint,
-                fillColor: AppColors.surface,
+                backgroundColor: AppColors.surface,
                 labelPadding: EdgeInsets.symmetric(horizontal: AppSpace.x3),
               ),
             ),

@@ -1,17 +1,18 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:pointycastle/pointycastle.dart';
+import 'package:pointycastle/export.dart' as pc;
 
 import '../models/note.dart';
 import 'app_state.dart';
 
-/// VaultService manages encrypted notes using AES/CBC via the `encrypt` package.
+/// VaultService manages encrypted notes using AES/CBC via pointycastle.
 ///
 /// Key derivation uses PBKDF2 (SHA-256, 100,000 iterations) from a fixed salt.
-/// Each note is encrypted as a full JSON object (title + content together),
-/// fixing the web clone bug where only the body was encrypted.
+/// Each note is encrypted as a full JSON object (title + content together).
 class VaultService {
   VaultService._();
   static final VaultService instance = VaultService._();
@@ -19,14 +20,10 @@ class VaultService {
   static const String _kVaultNotes = 'vault_notes_v1';
   static const String _kVaultPwd = 'vault_password_v1';
 
-  /// The active vault password (only held in memory while unlocked).
   String? _password;
   bool _locked = true;
-
-  /// The current SharedPreferences instance.
   SharedPreferences? _prefs;
 
-  /// Initialize the vault service.
   static Future<void> init() async {
     try {
       instance._prefs = await SharedPreferences.getInstance();
@@ -35,13 +32,11 @@ class VaultService {
     }
   }
 
-  /// Is there a vault password set?
   bool hasPassword() {
     final prefs = _prefs;
     return prefs != null && prefs.containsKey(_kVaultPwd);
   }
 
-  /// Set the vault password (first time setup).
   static Future<void> setPassword(String password) async {
     final prefs = instance._prefs;
     if (prefs == null) throw StateError('VaultService not initialized');
@@ -51,8 +46,6 @@ class VaultService {
     instance._locked = false;
   }
 
-  /// Attempt to unlock the vault.
-  /// Returns `true` on success, `false` otherwise.
   static Future<bool> unlock(String password) async {
     final prefs = instance._prefs;
     if (prefs == null) return false;
@@ -64,16 +57,13 @@ class VaultService {
     return true;
   }
 
-  /// Lock the vault and wipe the password from memory.
   static Future<void> lock() async {
     instance._password = null;
     instance._locked = true;
   }
 
-  /// Is the vault currently locked?
   bool get isLocked => _locked;
 
-  /// List of vault notes (decrypted). Empty if locked or no password.
   static List<Note> vaultNotes() {
     final prefs = instance._prefs;
     if (prefs == null || instance._locked || instance._password == null) {
@@ -93,7 +83,6 @@ class VaultService {
     return out;
   }
 
-  /// Save a vault note (encrypts full note JSON).
   static Future<void> saveVaultNote(Note note) async {
     final prefs = instance._prefs;
     if (prefs == null || instance._locked || instance._password == null) {
@@ -108,7 +97,6 @@ class VaultService {
     AppState.instance.notify();
   }
 
-  /// Delete a vault note.
   static Future<void> deleteVaultNote(String id) async {
     final prefs = instance._prefs;
     if (prefs == null || instance._locked || instance._password == null) {
@@ -122,7 +110,6 @@ class VaultService {
     AppState.instance.notify();
   }
 
-  /// Clear all vault notes.
   static Future<void> clearVault() async {
     final prefs = instance._prefs;
     if (prefs == null) throw StateError('التخزين غير جاهز');
@@ -130,53 +117,72 @@ class VaultService {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // CRYPTO HELPERS (AES/CBC/256 + PBKDF2)
+  // CRYPTO HELPERS (AES/CBC/256 + PBKDF2 via pointycastle)
   // ════════════════════════════════════════════════════════════════
 
-  /// Derive a 256-bit key from the password via PBKDF2/SHA-256.
-  static encrypt.Key _deriveKey(String password) {
-    final salt = utf8.encode('note-me-vault-salt-v1');
-    final pbkdf = encrypt.PBKDF2(
-      key: utf8.encode(password),
-      salt: salt,
-      iterations: 100000,
-      mac: encrypt.HMAC(encrypt.SHA256(), utf8.encode(password)),
-      keyLength: 32,
+  static Uint8List _deriveKey(String password) {
+    const salt = 'note-me-vault-salt-v1';
+    final params = pc.PBKDF2Parameters(
+      utf8.encode(salt) as Uint8List,
+      100000,
+      32,
     );
-    return encrypt.Key(pbkdf.key);
+    final derivator = pc.KeyDerivator('SHA-256/HMAC/PBKDF2') as pc.PBKDF2KeyDerivator;
+    derivator.init(params);
+    return derivator.process(utf8.encode(password) as Uint8List);
   }
 
-  /// Encrypt a string — returns base64 of (IV + ciphertext).
   static String _encryptString(String plain, String password) {
     final key = _deriveKey(password);
-    final iv = encrypt.IV(math.Random().nextBytes(16));
-    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
-    final encrypted = encrypter.encrypt(plain, iv: iv);
-    final combined = utf8.encode(iv.base64) + '\n' + utf8.encode(encrypted.base64);
-    return base64.encode(utf8.encode(combined));
+    // Generate random IV
+    final iv = Uint8List.fromList(
+      List.generate(16, (_) => (math.Random().nextDouble() * 256).toInt()),
+    );
+
+    // AES/CBC encryption
+    final cipher = pc.PaddedBlockCipher('AES/CBC/PKCS7') as pc.PaddedBlockCipher;
+    cipher.init(
+      true,
+      pc.ParamsWithIV(pc.KeyParameter(key), iv) as pc.CipherParameters,
+    );
+    final plainBytes = utf8.encode(plain) as Uint8List;
+    final encrypted = cipher.process(plainBytes);
+
+    // Combine IV + ciphertext, encode as base64
+    final combined = Uint8List(iv.length + encrypted.length);
+    combined.setAll(0, iv);
+    combined.setAll(iv.length, encrypted);
+    return base64.encode(combined);
   }
 
-  /// Decrypt a string (base64 of IV + ciphertext).
   static String _decryptString(String encB64, String password) {
-    final combined = utf8.decode(base64.decode(encB64));
-    final nl = combined.indexOf('\n');
-    if (nl == -1) throw FormatException('divider missing');
-    final ivB64 = combined.substring(0, nl);
-    final ctB64 = combined.substring(nl + 1);
+    final combined = base64.decode(encB64);
+    final iv = Uint8List.fromList(combined.sublist(0, 16));
+    final ciphertext = Uint8List.fromList(combined.sublist(16));
+
     final key = _deriveKey(password);
-    final iv = encrypt.IV.fromBase64(ivB64);
-    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
-    return encrypter.decrypt64(ctB64, iv: iv);
+    final cipher = pc.PaddedBlockCipher('AES/CBC/PKCS7') as pc.PaddedBlockCipher;
+    cipher.init(
+      false,
+      pc.ParamsWithIV(pc.KeyParameter(key), iv) as pc.CipherParameters,
+    );
+    final decrypted = cipher.process(ciphertext);
+    return utf8.decode(decrypted);
   }
 
-  /// Hash the password (SHA-256) for local storage.
   static String _hash(String password) {
-    final sha = encrypt.SHA256();
-    final digest = sha.convert(utf8.encode(password)).bytes;
-    return base64.encode(digest);
+    final derivator = pc.KeyDerivator('SHA-256/HMAC/PBKDF2') as pc.PBKDF2KeyDerivator;
+    const salt = 'note-me-vault-salt-v1';
+    final params = pc.PBKDF2Parameters(
+      utf8.encode(salt) as Uint8List,
+      100000,
+      32,
+    );
+    derivator.init(params);
+    final out = derivator.process(utf8.encode(password) as Uint8List);
+    return base64.encode(out);
   }
 
-  /// Wipe the password from memory.
   static Future<void> wipe() async {
     instance._password = null;
     instance._locked = true;
