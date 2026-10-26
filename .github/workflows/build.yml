@@ -1,23 +1,208 @@
 name: Build APK
+
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.7"
-          channel: "stable"
-      - run: flutter --version | tee toolchain.txt
+          # Pinned (Session 4): build #81 (green) ran Flutter 3.47.7 / Dart 3.13.5. Unpinned 'stable'
+          # silently changed plugin resolution between #75 and #76 and broke the app (black screen).
+          # Bump deliberately, with a device test.
+          flutter-version: '3.47.7'
+          channel: 'stable'
+
+      - name: Toolchain fingerprint (recorded in the release notes)
+        run: |
+          flutter --version 2>&1 | tee toolchain.txt
+          echo "" >> toolchain.txt
+          echo "pubspec.lock shared_preferences_android:" >> toolchain.txt
+          grep -A6 '^  shared_preferences_android:' pubspec.lock >> toolchain.txt || true
+
+      - name: Generate missing android/ scaffold (source zip lacked it)
+        run: |
+          if [ ! -d "android" ]; then
+            flutter create --platforms=android --org com.example --project-name manager_assistant .
+          fi
+          # `flutter create .` only writes files that don't already exist, and this repo
+          # has never committed test/widget_test.dart — so every run since android/ stopped
+          # being committed has silently regenerated Flutter's default boilerplate test here,
+          # which references a non-existent `MyApp` class (our root widget is `ManagerApp` in
+          # lib/main.dart). It was invisible because CI never ran `flutter analyze`/`flutter
+          # test` until this build. Our own suite (test/*_test.dart) already covers the app;
+          # remove the generated placeholder so it can't fail analysis or tests.
+          rm -f test/widget_test.dart
+
+      - name: Inject required Android permissions (mic + notifications)
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ]; then
+            for perm in \
+              'android.permission.RECORD_AUDIO' \
+              'android.permission.POST_NOTIFICATIONS' \
+              'android.permission.INTERNET' \
+              'android.permission.RECEIVE_BOOT_COMPLETED'; do
+              if ! grep -q "$perm" "$MANIFEST"; then
+                sed -i "/<manifest /a\\    <uses-permission android:name=\"$perm\" />" "$MANIFEST"
+              fi
+            done
+            echo "---- AndroidManifest.xml after injection ----"
+            cat "$MANIFEST"
+          fi
+
+      - name: Register flutter_local_notifications boot receiver (reminders survive reboot)
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ] && ! grep -q "ScheduledNotificationBootReceiver" "$MANIFEST"; then
+            # flutter_local_notifications ships these two receiver classes inside its own
+            # Android library (no custom native code needed). ScheduledNotificationBootReceiver
+            # listens for BOOT_COMPLETED and re-arms the plugin's own natively-persisted
+            # pending notification requests directly — no Dart/Flutter execution required at
+            # boot time, so this does not introduce a second scheduling architecture.
+            # Must be a child of <application>, not <manifest>, hence anchored on the fixed
+            # literal line that closes <application ...> in Flutter's current template
+            # (verified against flutter/flutter packages/flutter_tools templates source).
+            cat > /tmp/boot_receiver_block.xml << 'RECEIVER_EOF'
+          <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+          <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+              <intent-filter>
+                  <action android:name="android.intent.action.BOOT_COMPLETED" />
+                  <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                  <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+              </intent-filter>
+          </receiver>
+          RECEIVER_EOF
+            sed -i '/android:icon="@mipmap\/ic_launcher">/r /tmp/boot_receiver_block.xml' "$MANIFEST"
+          fi
+          echo "---- AndroidManifest.xml after boot-receiver injection ----"
+          cat "$MANIFEST"
+
+      - name: Add ProGuard rules for flutter_local_notifications and Gson
+        run: |
+          cat > android/app/proguard-rules.pro << 'PROGUARD_EOF'
+          # Keep flutter_local_notifications classes intact.
+          # The plugin uses Gson for serializing scheduled notification payloads.
+          # Without these rules, R8 strips Gson generic type metadata (TypeToken, etc.),
+          # causing "Missing type parameter" / ClassCastException at runtime when
+          # flutter_local_notifications tries to deserialize persisted notifications.
+          -keep class com.dexterous.flutterlocalnotifications.** { *; }
+          -keep class com.google.gson.** { *; }
+          -keepattributes Signature
+          -keepattributes *Annotation*
+          # Also needed for the underlying AlarmManager/notification serialization.
+          -dontwarn com.google.gson.**
+          PROGUARD_EOF
+          echo "---- proguard-rules.pro created ----"
+          cat android/app/proguard-rules.pro
+
+      - name: Enable core library desugaring + R8 minification with ProGuard rules
+        run: |
+          # Flutter generates build.gradle (Groovy) by default when the android/ folder
+          # is fresh from flutter create. We append to it.
+          if [ -f "android/app/build.gradle.kts" ]; then
+            cat >> android/app/build.gradle.kts << 'GRADLE_EOF'
+
+          android {
+              compileOptions {
+                  isCoreLibraryDesugaringEnabled = true
+              }
+              buildTypes {
+                  release {
+                      isMinifyEnabled = true
+                      isShrinkResources = true
+                      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                  }
+              }
+          }
+
+          dependencies {
+              coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+          }
+          GRADLE_EOF
+          elif [ -f "android/app/build.gradle" ]; then
+            cat >> android/app/build.gradle << 'GRADLE_EOF'
+
+          android {
+              compileOptions {
+                  coreLibraryDesugaringEnabled true
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled true
+                      shrinkResources true
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+          }
+
+          dependencies {
+              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+          }
+          GRADLE_EOF
+          fi
+          echo "---- build.gradle after update ----"
+          cat android/app/build.gradle || cat android/app/build.gradle.kts
+
       - run: flutter pub get
-      - run: flutter analyze --no-fatal-infos
-      - run: flutter build apk --release
-      - uses: actions/upload-artifact@v4
-        with:
-          name: note-me-apk
-          path: build/app/outputs/apk/release/app-release.apk
+
+      - name: Guard — dependency drift (shared_preferences_android must stay 2.4.28)
+        run: |
+          v=$(awk '/^  shared_preferences_android:/{f=1} f && /version:/{print $2; exit}' pubspec.lock | tr -d '"')
+          echo "resolved shared_preferences_android=$v"
+          test "$v" = "2.4.28"
+
+      - name: Static analysis (flutter analyze)
+        run: |
+          set -o pipefail
+          # --no-fatal-infos: fail the build on real errors/warnings, not on the
+          # pre-existing style-only "info" lints (prefer_const_constructors etc.)
+          # that predate this CI check and are out of scope for this change —
+          # fixing those is a separate, broader cleanup, not a build-breaking bug.
+          flutter analyze --no-fatal-infos 2>&1 | tee build_log.txt
+
+      - name: Run tests (offline suite — real Gemini integration tests are tagged "live" and skipped here)
+        run: |
+          set -o pipefail
+          flutter test --exclude-tags live 2>&1 | tee -a build_log.txt
+
+      - name: Build APK
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee -a build_log.txt
+
+      - name: Create Release with APK
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" \
+            "build/app/outputs/flutter-apk/app-release.apk" \
+            --target "${{ github.sha }}" \
+            --title "Manager Assistant APK build #${{ github.run_number }}" \
+            --notes "Automated release build from commit ${{ github.sha }} (branch ${{ github.ref_name }}).
+
+          Toolchain:
+          $(cat toolchain.txt)"
+
+      - name: Upload build log on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="debug-${{ github.run_number }}"
+          tail -n 500 build_log.txt > build_log_tail.txt || echo "no log" > build_log_tail.txt
+          gh release create "$TAG" \
+            "build_log_tail.txt" \
+            --title "Build FAILED log #${{ github.run_number }}" \
+            --notes "Automated failure log from commit ${{ github.sha }}"
