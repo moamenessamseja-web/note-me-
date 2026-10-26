@@ -42,7 +42,7 @@ class _VaultScreenState extends State<VaultScreen> {
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : VaultService.isUnlocked
+            : !VaultService.instance.isLocked
                 ? _buildUnlockedView()
                 : _buildLockedView(),
       ),

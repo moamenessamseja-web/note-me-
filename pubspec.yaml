@@ -21,6 +21,8 @@ dependencies:
   path_provider: ^2.1.4
   # Encryption for vault notes
   encrypt: ^5.0.1
+  # Arabic font (Cairo from Google Fonts — no local .ttf needed)
+  google_fonts: ^6.1.0
 
 dependency_overrides:
   # Pinned on purpose (mirrors reference-repo Session-4 rule): shared_preferences_android
