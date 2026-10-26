@@ -7,7 +7,6 @@ class SettingsService {
   static final SettingsService instance = SettingsService._();
 
   static late SharedPreferences _p;
-  static bool _initialized = false;
 
   static const kThemeMode = 'theme_mode'; // 'system' | 'light' | 'dark'
   static const kFontSize = 'font_size'; // double
@@ -15,7 +14,6 @@ class SettingsService {
 
   static Future<void> init() async {
     _p = await SharedPreferences.getInstance();
-    _initialized = true;
   }
 
   static ThemeMode get themeMode {

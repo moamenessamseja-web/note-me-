@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pointycastle/pointycastle.dart';
 import 'package:pointycastle/export.dart' as pc;
 
 import '../models/note.dart';
@@ -123,8 +122,8 @@ class VaultService {
   static Uint8List _deriveKey(String password) {
     const salt = 'note-me-vault-salt-v1';
     final derivator = pc.PBKDF2KeyDerivator(pc.HMac(pc.SHA256Digest(), 64));
-    derivator.init(pc.Pbkdf2Parameters(utf8.encode(salt) as Uint8List, 100000, 32));
-    return derivator.process(utf8.encode(password) as Uint8List);
+    derivator.init(pc.Pbkdf2Parameters(utf8.encode(salt), 100000, 32));
+    return derivator.process(utf8.encode(password));
   }
 
   static String _encryptString(String plain, String password) {
@@ -137,7 +136,7 @@ class VaultService {
     // AES/CBC encryption
     final cipher = pc.PaddedBlockCipher('AES/CBC/PKCS7');
     cipher.init(true, pc.ParametersWithIV(pc.KeyParameter(key), iv));
-    final plainBytes = utf8.encode(plain) as Uint8List;
+    final plainBytes = utf8.encode(plain);
     final encrypted = cipher.process(plainBytes);
 
     // Combine IV + ciphertext, encode as base64
@@ -162,8 +161,8 @@ class VaultService {
   static String _hash(String password) {
     final derivator = pc.PBKDF2KeyDerivator(pc.HMac(pc.SHA256Digest(), 64));
     const salt = 'note-me-vault-salt-v1';
-    derivator.init(pc.Pbkdf2Parameters(utf8.encode(salt) as Uint8List, 100000, 32));
-    final out = derivator.process(utf8.encode(password) as Uint8List);
+    derivator.init(pc.Pbkdf2Parameters(utf8.encode(salt), 100000, 32));
+    final out = derivator.process(utf8.encode(password));
     return base64.encode(out);
   }
 

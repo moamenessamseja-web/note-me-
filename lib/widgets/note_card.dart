@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:note_me/design/tokens.dart';
-import 'package:note_me/design/app_theme.dart';
 import 'package:note_me/design/strings.dart';
 import 'package:note_me/screens/reader_screen.dart';
 import 'package:note_me/services/app_state.dart';
