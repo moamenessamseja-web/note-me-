@@ -1,5 +1,5 @@
 name: note_me
-description: "Mindbook Pro clone — Fast, clean, offline-first markdown notebook for Android."
+description: "Note Me — offline-first Markdown notebook for Android (Flutter)."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,18 +13,8 @@ dependencies:
   shared_preferences: ^2.3.2
   # Markdown parsing for notes
   markdown: ^7.2.1
-  # HTML sanitizer for safe markdown rendering
-  html: ^0.15.4
-  # UUID for note ids
-  uuid: ^4.4.0
-  # Backup/export (file picking + saving)
-  path_provider: ^2.1.4
   # Encryption for vault notes (AES/CBC via pure Dart)
   pointycastle: ^3.9.1
-  # Encryption (kept for compatibility)
-  encrypt: ^5.0.1
-  # Arabic font (Cairo from Google Fonts — no local .ttf needed)
-  google_fonts: ^6.1.0
 
 dependency_overrides:
   # Pinned on purpose (mirrors reference-repo Session-4 rule): shared_preferences_android
@@ -38,5 +28,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:note_me/design/tokens.dart';
 import 'package:note_me/design/strings.dart';
 import '../services/storage_service.dart';
-import '../widgets/note_card.dart';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
