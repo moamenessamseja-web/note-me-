@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:note_me/design/tokens.dart';
 import 'package:note_me/design/strings.dart';
+import '../services/app_error_service.dart';
 import '../services/storage_service.dart';
 import '../services/vault_service.dart';
 import '../models/note.dart';
@@ -17,6 +18,7 @@ class EditorScreen extends StatefulWidget {
 class _EditorScreenState extends State<EditorScreen> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _contentCtrl;
+  late final TextEditingController _tagsCtrl;
   String? _selectedCategory;
   List<String> _tags = [];
   bool _vault = false;
@@ -28,6 +30,7 @@ class _EditorScreenState extends State<EditorScreen> {
     _contentCtrl = TextEditingController(text: widget.note?.content ?? '');
     _selectedCategory = widget.note?.categoryId;
     _tags = List.from(widget.note?.tags ?? []);
+    _tagsCtrl = TextEditingController(text: _tags.join(', '));
     _vault = widget.note?.vault ?? false;
   }
 
@@ -35,6 +38,7 @@ class _EditorScreenState extends State<EditorScreen> {
   void dispose() {
     _titleCtrl.dispose();
     _contentCtrl.dispose();
+    _tagsCtrl.dispose();
     super.dispose();
   }
 
@@ -94,6 +98,7 @@ class _EditorScreenState extends State<EditorScreen> {
               ),
               SizedBox(height: AppSpace.x3),
               TextField(
+                controller: _tagsCtrl,
                 decoration: InputDecoration(
                   labelText: L.note_tags,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -135,15 +140,33 @@ class _EditorScreenState extends State<EditorScreen> {
       updatedAt: now,
     );
 
-    if (_vault) {
-      // Encrypt and save to vault instead of regular storage
-      await VaultService.saveVaultNote(note);
-      // Remove from regular notes if it existed there
-      if (widget.note != null) {
-        await StorageService.deleteNote(widget.note!.id);
+    try {
+      if (_vault) {
+        // Encrypt and save to the vault; drop the plaintext copy if it was a regular note.
+        await VaultService.saveVaultNote(note);
+        final prev = widget.note;
+        if (prev != null && !prev.vault) {
+          await StorageService.deleteNote(prev.id);
+        }
+      } else {
+        await StorageService.saveNote(note);
+        final prev = widget.note;
+        if (prev != null && prev.vault) {
+          // The note left the vault: remove the encrypted duplicate.
+          await VaultService.deleteVaultNote(prev.id);
+        }
       }
-    } else {
-      await StorageService.saveNote(note);
+    } catch (e, st) {
+      AppErrorService.log('editor.save', e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppErrorService.userMessage(e)),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+      return;
     }
 
     if (mounted) {

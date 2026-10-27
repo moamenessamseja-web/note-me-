@@ -27,3 +27,7 @@
 ### Added
 - **.agent/ memory** — IMPLEMENTATION_STATE.md and HANDOFF.md
 - **VaultService import** to editor_screen.dart
+
+## 2026-10-27
+- fix(ci) b302149: removed 2 unused imports + missing assets/ decl (the 3 analyzer WARNINGS that failed run 14); removed unused deps (html, uuid, path_provider, encrypt, google_fonts) and dead stubs (reminder/notification/rules services); deleted dart.yml (Dart-package workflow cannot analyze a Flutter app); rewrote build.yml (was copied from manager-assistant). Added test/note_test.dart, test/storage_test.dart. Run 15: GREEN (build-15).
+- feat(reader) fc21d08: native Markdown renderer (lib/widgets/markdown_view.dart); reader previously showed raw HTML text. Added test/markdown_view_test.dart. Run 16: GREEN (build-16).

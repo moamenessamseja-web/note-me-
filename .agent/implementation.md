@@ -1,7 +1,7 @@
 # implementation.md — Feature & Inventory
 
 ## Status Legend
-- ✅ **Verified complete** — CI green + artifact inspected
+- Verified complete — CI green + artifact inspected
 - 🔄 **Implemented, not yet verified** — code present, CI not confirmed
 - ⚠️ **Partially implemented** — stub / in-progress
 - ❌ **Not started**
@@ -12,52 +12,58 @@
 ## Screens
 | Feature | Status | Notes |
 |---|---|---|
-| MainShell (10-tab nav) | ✅ Verified complete | Bottom nav + drawer; IndexedStack |
-| HomeScreen | ✅ Verified complete | Search bar, category chips, note list |
-| NotesScreen | ✅ Verified complete | Sort + filter, note list |
-| EditorScreen | ✅ Verified complete | Save, vault toggle, category, tags |
-| ReaderScreen | ✅ Verified complete | Markdown rendering via `markdown` package |
-| SearchScreen | ✅ Verified complete | Full-text search across notes |
-| CategoriesScreen | ✅ Verified complete | Expandable category tree with notes |
-| ThemesScreen | ✅ Verified complete | Light/Dark/System radio |
-| VaultScreen | ✅ Verified complete | AES/CBC encryption via pointycastle |
-| SettingsScreen | ✅ Verified complete | Theme, language, font size, backup stub |
-| AboutScreen | ✅ Verified complete | Version, description, license |
+| MainShell (10-tab nav) | Implemented, not yet verified | Bottom nav + drawer; IndexedStack |
+| HomeScreen | Implemented, not yet verified | Search bar, category chips, note list |
+| NotesScreen | Implemented, not yet verified | Sort + filter, note list |
+| EditorScreen | Implemented, not yet verified | Save, vault toggle, category, tags |
+| ReaderScreen | Implemented, not yet verified | Native renderer MarkdownView; CI widget tests green (run 16); not device-tested |
+| SearchScreen | Implemented, not yet verified | Full-text search across notes |
+| CategoriesScreen | Implemented, not yet verified | Expandable category tree with notes |
+| ThemesScreen | Implemented, not yet verified | Light/Dark/System radio |
+| VaultScreen | Implemented, not yet verified | AES/CBC encryption via pointycastle |
+| SettingsScreen | Implemented, not yet verified | Theme, language, font size, backup stub |
+| AboutScreen | Implemented, not yet verified | Version, description, license |
 
 ## Services
 | Feature | Status | Notes |
 |---|---|---|
-| StorageService | ✅ Verified complete | SharedPreferences with serialization + error handling |
-| VaultService | ✅ Verified complete | PBKDF2 + AES/CBC/PKCS7; base64 storage |
-| SettingsService | ✅ Verified complete | Theme, font size, language persistence |
-| AppState (ValueNotifier) | ✅ Verified complete | Reactive state for rebuilds |
-| AppErrorService | ✅ Verified complete | Diagnostic log + user messages |
-| NotificationService | ⚠️ Partially implemented | Stub; POST_NOTIFICATIONS in manifest |
-| ReminderService | ⚠️ Partially implemented | Stub |
-| RulesService | ⚠️ Partially implemented | Stub |
+| StorageService | Implemented, not yet verified | SharedPreferences with serialization + error handling |
+| VaultService | Implemented, not yet verified | PBKDF2 + AES/CBC/PKCS7; base64 storage |
+| SettingsService | Implemented, not yet verified | Theme, font size, language persistence |
+| AppState (ValueNotifier) | Implemented, not yet verified | Reactive state for rebuilds |
+| AppErrorService | Implemented, not yet verified | Diagnostic log + user messages |
 
 ## Models
 | Feature | Status | Notes |
 |---|---|---|
-| Note | ✅ Verified complete | JSON serialization, copyWith, preview getter |
-| Category | ✅ Verified complete | JSON serialization, copyWith |
+| Note | Implemented, not yet verified | JSON serialization, copyWith, preview getter |
+| Category | Implemented, not yet verified | JSON serialization, copyWith |
 
 ## Design System
 | Feature | Status | Notes |
 |---|---|---|
-| tokens.dart (AppColors, AppSpace, AppRadius, AppText) | ✅ Verified complete | All Material 3, Cairo/Tajawal font |
-| app_theme.dart (ThemeData light/dark) | ✅ Verified complete | Used in main.dart |
-| strings.dart (L — Arabic/English) | ✅ Verified complete | 60+ keys, RTL support |
+| tokens.dart (AppColors, AppSpace, AppRadius, AppText) | Implemented, not yet verified | All Material 3, Cairo/Tajawal font |
+| app_theme.dart (ThemeData light/dark) | Implemented, not yet verified | Used in main.dart |
+| strings.dart (L — Arabic/English) | Implemented, not yet verified | 60+ keys, RTL support |
 
 ## CI / Build
 | Feature | Status | Notes |
 |---|---|---|
 | build.yml (APK) | 🔄 Implemented, not yet verified | Flutter 3.47.7, analyze, test, APK |
 | dart.yml (CI checks) | 🔄 Implemented, not yet verified | Static analysis only |
-| ProGuard rules | ✅ Verified complete | Gson + flutter_local_notifications |
-| AndroidManifest (permissions + boot receiver) | ✅ Verified complete | Injected by workflow |
+| ProGuard rules | Implemented, not yet verified | Gson + flutter_local_notifications |
+| AndroidManifest (permissions + boot receiver) | Implemented, not yet verified | Injected by workflow |
 
 ## Out of Scope (Frozen)
 - Google sign-in — stub only, not implemented
 - Cloud backup — localStorage only
 - Live Gemini integration tests — tagged `live`, skipped in CI
+
+
+## Verification log (2026-10-27)
+| Build | Commit | CI | Device |
+|---|---|---|---|
+| build-15 | b302149 | green (analyze, tests, APK) | not tested |
+| build-16 | fc21d08 | green (analyze, tests incl. markdown, APK) | not tested |
+
+Removed 2026-10-27: Notification/Reminder/Rules services (dead stubs, no plugin).
