@@ -65,5 +65,6 @@
 |---|---|---|---|
 | build-15 | b302149 | green (analyze, tests, APK) | not tested |
 | build-16 | fc21d08 | green (analyze, tests incl. markdown, APK) | not tested |
+| build-17 | 2906bb2 | green (editor error handling; no editor test) | not tested |
 
 Removed 2026-10-27: Notification/Reminder/Rules services (dead stubs, no plugin).

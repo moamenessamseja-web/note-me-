@@ -15,6 +15,7 @@ Baseline: 702df83 (tag baseline-run14-red). Anchor given by owner: manager-assis
 | Analyzer warnings fixed, deps/dead code removed, workflow rewritten | CI green run 15 |
 | Tests: Note/Category JSON, storage CRUD+corruption+concurrency | CI green run 15 |
 | Native Markdown renderer + 9 widget tests | CI green run 16 |
+| Editor save error handling, vault-move duplicate fix, tags prefill (read from code; no editor widget test yet) | CI green run 17 (compiles/analyzes only) |
 | APK inspected (build-15): id app.noteme.*, no com.example, no INTERNET permission, 55 MB | artifact inspected |
 
 ### NOT verified
